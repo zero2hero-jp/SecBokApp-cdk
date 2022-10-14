@@ -1,0 +1,32 @@
+name: Feature
+description: File a feature report
+title: "[Feature]: "
+labels: ["enhancement"]
+assignees:
+  - octocat
+body:
+  - type: markdown
+    attributes:
+      value: |
+        追加要望や機能について記入をして下さい。
+  - type: textarea
+    id: feature-1
+    attributes:
+      label: WHY
+      description: なぜ必要なのか？価値仮説はなにか？
+      placeholder:
+      value:
+    validations:
+      required: true
+  - type: textarea
+    id: feature-2
+    attributes:
+      label: WHAT
+      description: 実現するためには何をするのか？タスクリストの定義。
+      placeholder: |
+        1. あれをする
+        2. これをする
+        3. そうするとこうなる
+      value:
+    validations:
+      required: true

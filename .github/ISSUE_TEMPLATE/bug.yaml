@@ -1,0 +1,71 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - octocat
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: textarea-1
+    attributes:
+      label: 概要
+      description: バグの概要を大まかに記入してください。
+      placeholder:
+      value:
+    validations:
+      required: true
+  - type: textarea
+    id: textarea-2
+    attributes:
+      label: 期待する動作
+      description: 本来どのように動くべきかを詳細に記入して下さい。
+      placeholder:
+      value:
+    validations:
+      required: true
+  - type: textarea
+    id: textarea-3
+    attributes:
+      label: 環境
+      description: バグの発生した環境の詳細を記入して下さい。
+      placeholder: |
+        - Ubuntu 20.04.1
+        - docker 20.10.18
+        - docker compose v2.10.2
+      value:
+    validations:
+      required: false
+  - type: textarea
+    id: textarea-4
+    attributes:
+      label: 再現手順
+      description: 他の人が再現できるように手順を詳細に記入して下さい。
+      placeholder: |
+        1. まず、あれをあーする。
+        2. 次に、これをこーする。
+        3. そうすると、こうなる。
+      value:
+    validations:
+      required: false
+  - type: textarea
+    id: textarea-5
+    attributes:
+      label: 修正方法
+      description: ファイル名や該当箇所など修正に検討が付く場合は記入してください。
+      placeholder:
+      value:
+    validations:
+      required: false
+  - type: textarea
+    id: textarea-6
+    attributes:
+      label: エビデンス
+      description: ログ、キャプチャー、その他URLなど証跡がある場合は記入してください。
+      placeholder:
+      value:
+    validations:
+      required: false

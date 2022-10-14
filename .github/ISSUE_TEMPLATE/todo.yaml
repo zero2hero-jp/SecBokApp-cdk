@@ -1,0 +1,20 @@
+name: Todo
+description: Todo
+title: "[Todo]: "
+labels: ["todo", "enhancement"]
+assignees:
+  - octocat
+body:
+  - type: markdown
+    attributes:
+      value: |
+        使い方自由。思いついたアイディア、忘れないうちにメモっておこう。
+  - type: textarea
+    id: todo-1
+    attributes:
+      label: TODO
+      description: アイディアや課題などなんでも自由にどうぞ。
+      placeholder:
+      value:
+    validations:
+      required: true
