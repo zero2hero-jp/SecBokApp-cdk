@@ -38,4 +38,4 @@ runs:
       shell: bash
       run: >
         TARGET_ENV=${{ inputs.env }} 
-        yarn cdk deploy SecBokAppStack-${{ inputs.env }} --require-approval never --profile secbokapp-cdk
+        yarn cdk deploy SecBokAppStack-${{ inputs.env }} --require-approval never
