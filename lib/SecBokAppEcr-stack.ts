@@ -8,7 +8,7 @@ import {
 import { TargetEnvType } from './types/TargetEnvType';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 
-export class EcrStack extends cdk.Stack {
+export class SecBokAppEcrStack extends cdk.Stack {
   public readonly repo: Repository
 
   constructor(scope: Construct, id: string, targetEnv: TargetEnvType, props?: cdk.StackProps) {
