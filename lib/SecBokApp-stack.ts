@@ -130,8 +130,7 @@ export class SecBokAppStack extends cdk.Stack {
         DATABASE_HOST: postgresql.instanceEndpoint.hostname,
         DATABASE_NAME: props.dbName,
         DATABASE_NAME_PRODUCTION: props.dbName,
-        DATABASE_USER: props.dbUser,
-        FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID!
+        DATABASE_USER: props.dbUser
       },
       secrets: taskDefinitionSecrets
     })
@@ -140,16 +139,17 @@ export class SecBokAppStack extends cdk.Stack {
       containerPort: 3000
     });
     
-    // NLB
-    const nlb = new elbv2.NetworkLoadBalancer(this, 'Nlb', {
+    // ALB
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'Alb', {
       vpc: this.vpc,
-      loadBalancerName: `Nlb-${props.targetEnv}`,
-      internetFacing: false
+      loadBalancerName: `Alb-${props.targetEnv}`,
+      internetFacing: true
     });
     
+    
     // TODO: セキュリテグルーを作成して追加。port 3000
-    const loadBalancedFargateService = 
-      new ecs_patterns.NetworkLoadBalancedFargateService(
+    const lbFargateService = 
+      new ecs_patterns.ApplicationLoadBalancedFargateService(
         this, 
         'LoadBalancedFargateService', 
         {
@@ -157,7 +157,6 @@ export class SecBokAppStack extends cdk.Stack {
           assignPublicIp: false,
           cluster: ecsCluster,
           taskSubnets: this.vpc.selectSubnets({
-            //subnetType: ec2.SubnetType.PRIVATE_ISOLATED
             subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
           }),
           memoryLimitMiB: 1024,
@@ -165,10 +164,10 @@ export class SecBokAppStack extends cdk.Stack {
           desiredCount: 2,
           taskDefinition: taskDefinition,
           publicLoadBalancer: true,
-          loadBalancer: nlb
+          loadBalancer: alb
         }
       )
-      loadBalancedFargateService.service.connections.allowFrom(
+      lbFargateService.service.connections.allowFrom(
         ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
         ec2.Port.tcp(3000)
       )
@@ -179,7 +178,7 @@ export class SecBokAppStack extends cdk.Stack {
 
     // Auto Scaling Settings
     const scalableTarget =
-      loadBalancedFargateService.service.autoScaleTaskCount({
+      lbFargateService.service.autoScaleTaskCount({
         minCapacity: 2,
         maxCapacity: 10,
       });

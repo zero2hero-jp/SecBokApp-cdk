@@ -4,7 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 
 import { TargetEnvType, RailsEnvType } from '../lib/types/TargetEnvType';
 
-import { EcrStack } from '../lib/ecr-stack';
+import { SecBokAppEcrStack } from '../lib/SecBokAppEcr-stack';
 import { SecBokAppStack } from '../lib/SecBokApp-stack';
 
 let targetEnv :TargetEnvType = 'local'
@@ -25,13 +25,9 @@ if (process.env.TARGET_ENV === 'prod') {
   vpcSubnet = '10.0.2.0/24'
 }
 
-if (process.env.FIREBASE_PROJECT_ID == null) {
-  throw new Error('FIREBASE_PROJECT_IDをセットして下さい。')
-}
-
 const app = new cdk.App();
 
-const repository = new EcrStack(app, `EcrStack-${targetEnv}`, targetEnv)
+const repository = new SecBokAppEcrStack(app, `SecBokAppEcrStack-${targetEnv}`, targetEnv)
 
 // cdk ls
 new SecBokAppStack(app, `SecBokAppStack-${targetEnv}`, {
