@@ -171,6 +171,9 @@ export class SecBokAppStack extends cdk.Stack {
         ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
         ec2.Port.tcp(3000)
       )
+      lbFargateService.targetGroup.configureHealthCheck({
+        path: '/health_check'
+      })
     
     // Rilas側でDNSリバインディング対策を行う場合は、コンテナに環境変数としてNLBのホスト名を渡す。
     //const container = taskDefinition.findContainer(`Container-${props.targetEnv}`)
