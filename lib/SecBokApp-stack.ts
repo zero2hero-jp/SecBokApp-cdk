@@ -102,6 +102,21 @@ export class SecBokAppStack extends cdk.Stack {
         'password'
       ),
     } 
+    
+    if (props.targetEnv === ('local' || 'dev')) {
+      /* 
+       * TODO: ここで以下の変数をタスク定義の環境変数ににセットする。シークレットマネージャーは使わなくていい。
+       * SMTP_ADDRESS #send gridから取得
+       * SMTP_PORT #send gridから取得
+       */ 
+    }
+    if (props.targetEnv === ('local' || 'dev')) {
+      /* 
+       * TODO: ここで以下の変数をタスク定義の環境変数ににセットする。シークレットマネージャーは使わなくていい。
+       * SMTP_ADDRESS #send gridから取得
+       * SMTP_PORT #send gridから取得
+       */ 
+    }
 
     // RAILS_MASTER_KEY Secrets Manager for prod only
     if (props.targetEnv === 'prod') {
@@ -157,7 +172,7 @@ export class SecBokAppStack extends cdk.Stack {
           assignPublicIp: false,
           cluster: ecsCluster,
           taskSubnets: this.vpc.selectSubnets({
-            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+            subnetType: ec2j.SubnetType.PRIVATE_WITH_EGRESS
           }),
           memoryLimitMiB: 1024,
           cpu: 512,
