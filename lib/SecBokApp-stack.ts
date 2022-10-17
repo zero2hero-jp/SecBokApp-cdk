@@ -172,7 +172,7 @@ export class SecBokAppStack extends cdk.Stack {
           assignPublicIp: false,
           cluster: ecsCluster,
           taskSubnets: this.vpc.selectSubnets({
-            subnetType: ec2j.SubnetType.PRIVATE_WITH_EGRESS
+            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
           }),
           memoryLimitMiB: 1024,
           cpu: 512,
