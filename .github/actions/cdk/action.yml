@@ -38,5 +38,4 @@ runs:
       shell: bash
       run: >
         TARGET_ENV=${{ inputs.env }} 
-        FIREBASE_PROJECT_ID=${{ inputs.firebase_project_id }} 
-        yarn cdk deploy KickstartStack-${{ inputs.env }} --require-approval never
+        yarn cdk deploy SecBokAppStack-${{ inputs.env }} --require-approval never

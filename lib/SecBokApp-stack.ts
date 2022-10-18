@@ -56,6 +56,10 @@ export class SecBokAppStack extends cdk.Stack {
         generateStringKey: 'password'
       }
     })
+    
+    // TODO: SendGrid Secret
+    //const senGridsecret = new secretmanager.Secret(this, 'SendGridSecret', {
+    //}
 
     // RDS SecurityGroup
     const rdsSG = new ec2.SecurityGroup(this, 'RdsSG', {
@@ -103,19 +107,21 @@ export class SecBokAppStack extends cdk.Stack {
       ),
     } 
 
-    // RAILS_MASTER_KEY Secrets Manager for prod only
-    if (props.targetEnv === 'prod') {
-      const railsSecret = new secretmanager.Secret(this, 'RailsSecret', {
-        secretName: `rails-master-key-${props.targetEnv}`,
-        secretObjectValue: {
-          railsMasterKey: SecretValue.unsafePlainText('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-        }
-      })
-      taskDefinitionSecrets.RAILS_MASTER_KEY = ecs.Secret.fromSecretsManager(
-        railsSecret, 
-        'railsMasterKey'
-      )
-    }
+    // TODO: sendGrid
+    // let sendGridTaskDefinitionSecrets: {[key: string]: ecs.Secret} = {
+    // } 
+
+    // RAILS_MASTER_KEY Secrets Manager
+    const railsSecret = new secretmanager.Secret(this, `RailsSecret-${props.targetEnv}`, {
+      secretName: `rails-master-key-${props.targetEnv}`,
+      secretObjectValue: {
+        railsMasterKey: SecretValue.unsafePlainText('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+      }
+    })
+    taskDefinitionSecrets.RAILS_MASTER_KEY = ecs.Secret.fromSecretsManager(
+      railsSecret, 
+      'railsMasterKey'
+    )
     
     taskDefinition.addContainer('Container', {
       containerName: `Container-${props.targetEnv}`,
@@ -130,8 +136,11 @@ export class SecBokAppStack extends cdk.Stack {
         DATABASE_HOST: postgresql.instanceEndpoint.hostname,
         DATABASE_NAME: props.dbName,
         DATABASE_NAME_PRODUCTION: props.dbName,
-        DATABASE_USER: props.dbUser,
-        FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID!
+        DATABASE_USER: props.dbUser
+        /*
+         * SMTP_ADDRESS #send gridから取得
+         * SMTP_PORT #send gridから取得
+         */
       },
       secrets: taskDefinitionSecrets
     })
@@ -140,16 +149,16 @@ export class SecBokAppStack extends cdk.Stack {
       containerPort: 3000
     });
     
-    // NLB
-    const nlb = new elbv2.NetworkLoadBalancer(this, 'Nlb', {
+    // ALB
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'Alb', {
       vpc: this.vpc,
-      loadBalancerName: `Nlb-${props.targetEnv}`,
-      internetFacing: false
+      loadBalancerName: `Alb-${props.targetEnv}`,
+      internetFacing: true
     });
     
     // TODO: セキュリテグルーを作成して追加。port 3000
-    const loadBalancedFargateService = 
-      new ecs_patterns.NetworkLoadBalancedFargateService(
+    const lbFargateService = 
+      new ecs_patterns.ApplicationLoadBalancedFargateService(
         this, 
         'LoadBalancedFargateService', 
         {
@@ -157,7 +166,6 @@ export class SecBokAppStack extends cdk.Stack {
           assignPublicIp: false,
           cluster: ecsCluster,
           taskSubnets: this.vpc.selectSubnets({
-            //subnetType: ec2.SubnetType.PRIVATE_ISOLATED
             subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
           }),
           memoryLimitMiB: 1024,
@@ -165,13 +173,16 @@ export class SecBokAppStack extends cdk.Stack {
           desiredCount: 2,
           taskDefinition: taskDefinition,
           publicLoadBalancer: true,
-          loadBalancer: nlb
+          loadBalancer: alb
         }
       )
-      loadBalancedFargateService.service.connections.allowFrom(
+      lbFargateService.service.connections.allowFrom(
         ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
         ec2.Port.tcp(3000)
       )
+      lbFargateService.targetGroup.configureHealthCheck({
+        path: '/health_check'
+      })
     
     // Rilas側でDNSリバインディング対策を行う場合は、コンテナに環境変数としてNLBのホスト名を渡す。
     //const container = taskDefinition.findContainer(`Container-${props.targetEnv}`)
@@ -179,7 +190,7 @@ export class SecBokAppStack extends cdk.Stack {
 
     // Auto Scaling Settings
     const scalableTarget =
-      loadBalancedFargateService.service.autoScaleTaskCount({
+      lbFargateService.service.autoScaleTaskCount({
         minCapacity: 2,
         maxCapacity: 10,
       });
