@@ -56,6 +56,10 @@ export class SecBokAppStack extends cdk.Stack {
         generateStringKey: 'password'
       }
     })
+    
+    // TODO: SendGrid Secret
+    //const senGridsecret = new secretmanager.Secret(this, 'SendGridSecret', {
+    //}
 
     // RDS SecurityGroup
     const rdsSG = new ec2.SecurityGroup(this, 'RdsSG', {
@@ -102,21 +106,10 @@ export class SecBokAppStack extends cdk.Stack {
         'password'
       ),
     } 
-    
-    if (props.targetEnv === ('local' || 'dev')) {
-      /* 
-       * TODO: ここで以下の変数をタスク定義の環境変数ににセットする。シークレットマネージャーは使わなくていい。
-       * SMTP_ADDRESS #send gridから取得
-       * SMTP_PORT #send gridから取得
-       */ 
-    }
-    if (props.targetEnv === ('local' || 'dev')) {
-      /* 
-       * TODO: ここで以下の変数をタスク定義の環境変数ににセットする。シークレットマネージャーは使わなくていい。
-       * SMTP_ADDRESS #send gridから取得
-       * SMTP_PORT #send gridから取得
-       */ 
-    }
+
+    // TODO: sendGrid
+    // let sendGridTaskDefinitionSecrets: {[key: string]: ecs.Secret} = {
+    // } 
 
     // RAILS_MASTER_KEY Secrets Manager
     const railsSecret = new secretmanager.Secret(this, `RailsSecret-${props.targetEnv}`, {
@@ -144,6 +137,10 @@ export class SecBokAppStack extends cdk.Stack {
         DATABASE_NAME: props.dbName,
         DATABASE_NAME_PRODUCTION: props.dbName,
         DATABASE_USER: props.dbUser
+        /*
+         * SMTP_ADDRESS #send gridから取得
+         * SMTP_PORT #send gridから取得
+         */
       },
       secrets: taskDefinitionSecrets
     })
