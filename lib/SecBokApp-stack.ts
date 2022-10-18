@@ -118,19 +118,17 @@ export class SecBokAppStack extends cdk.Stack {
        */ 
     }
 
-    // RAILS_MASTER_KEY Secrets Manager for prod only
-    if (props.targetEnv === 'prod') {
-      const railsSecret = new secretmanager.Secret(this, 'RailsSecret', {
-        secretName: `rails-master-key-${props.targetEnv}`,
-        secretObjectValue: {
-          railsMasterKey: SecretValue.unsafePlainText('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-        }
-      })
-      taskDefinitionSecrets.RAILS_MASTER_KEY = ecs.Secret.fromSecretsManager(
-        railsSecret, 
-        'railsMasterKey'
-      )
-    }
+    // RAILS_MASTER_KEY Secrets Manager
+    const railsSecret = new secretmanager.Secret(this, `RailsSecret-${props.targetEnv}`, {
+      secretName: `rails-master-key-${props.targetEnv}`,
+      secretObjectValue: {
+        railsMasterKey: SecretValue.unsafePlainText('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+      }
+    })
+    taskDefinitionSecrets.RAILS_MASTER_KEY = ecs.Secret.fromSecretsManager(
+      railsSecret, 
+      'railsMasterKey'
+    )
     
     taskDefinition.addContainer('Container', {
       containerName: `Container-${props.targetEnv}`,
