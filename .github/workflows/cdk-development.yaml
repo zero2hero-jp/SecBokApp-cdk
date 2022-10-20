@@ -3,7 +3,8 @@ name: '[ Development ] CDK Deploy'
 on: 
   push:
     branches:
-      - development
+      #- development コストの都合で一端自動デプロイしない
+      - none
     paths:
       - 'bin/**'
       - 'lib/**'

@@ -8,26 +8,39 @@ import {
   aws_ec2 as ec2,
   aws_rds as rds,
   aws_ecs as ecs,
+  aws_route53 as route53,
+  aws_certificatemanager as amc,
   aws_ecs_patterns as ecs_patterns,
   aws_secretsmanager as secretmanager,
   aws_apigateway as apigateway,
   aws_elasticloadbalancingv2 as elbv2,
   SecretValue,
 } from 'aws-cdk-lib'
-
-import { StackPropsType } from './types/TargetEnvType';
+import { ApplicationProtocol } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import { RecordTarget } from 'aws-cdk-lib/aws-route53';
 
 export class SecBokAppStack extends cdk.Stack {
   public readonly vpc: ec2.IVpc
 
-  constructor(scope: Construct, id: string, props: StackPropsType) {
+  constructor(scope: Construct, id: string, props: cdk.StackProps & {
+    repository: ecr.Repository
+    albHostedZone: route53.IHostedZone
+    albCertificate: amc.Certificate
+    albDomainName: string
+  }) {
     super(scope, id, props);
     
-    const rdsDeleteAutomatedBackups = props.targetEnv === ('local' || 'dev')
+    const targetEnv = process.env.TARGET_ENV!
+    const vpcSubnet = process.env.VPC_SUBNET!
+    const railsEnv  = process.env.RAILS_ENV!
+    const dbUser    = process.env.DB_USER!
+    const dbName    = process.env.DB_NAME!
+    
+    const rdsDeleteAutomatedBackups = targetEnv === ('local' || 'dev')
 
     // VPC
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      cidr: props.vpcSubnet,
+      cidr: vpcSubnet,
       enableDnsHostnames: true,
       enableDnsSupport: true,
       natGateways: 1,
@@ -48,9 +61,9 @@ export class SecBokAppStack extends cdk.Stack {
     
     // RDS Secret
     const secret = new secretmanager.Secret(this, 'RdsSecret', {
-      secretName: `postgres-${props.targetEnv}`,
+      secretName: `postgres-${targetEnv}`,
       generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: props.dbUser }),
+        secretStringTemplate: JSON.stringify({ username: dbUser }),
         excludePunctuation: true,
         includeSpace: false,
         generateStringKey: 'password'
@@ -58,7 +71,7 @@ export class SecBokAppStack extends cdk.Stack {
     })
     
     // TODO: SendGrid Secret
-    //const senGridsecret = new secretmanager.Secret(this, 'SendGridSecret', {
+    //const sendGridsecret = new secretmanager.Secret(this, 'SendGridSecret', {
     //}
 
     // RDS SecurityGroup
@@ -73,7 +86,7 @@ export class SecBokAppStack extends cdk.Stack {
 
     const postgresql = new rds.DatabaseInstance(this, 'Rds', {
       deleteAutomatedBackups: rdsDeleteAutomatedBackups,
-      instanceIdentifier: `Rds-${props.targetEnv}`,
+      instanceIdentifier: `Rds-${targetEnv}`,
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.VER_14_2,
       }),
@@ -85,19 +98,19 @@ export class SecBokAppStack extends cdk.Stack {
       },
       securityGroups: [rdsSG],
       credentials: rds.Credentials.fromSecret(secret),
-      databaseName: props.dbName
+      databaseName: dbName
     });
     
     // ECS Cluster
     const ecsCluster = new ecs.Cluster(this, 'EcsCluster', {
-      clusterName: `Cluster-${props.targetEnv}`,
+      clusterName: `Cluster-${targetEnv}`,
       vpc: this.vpc,
       containerInsights: true,
     });
 
     // ECS Task Definition
     const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
-      family: `task-${props.targetEnv}`
+      family: `task-${targetEnv}`
     })
 
     let taskDefinitionSecrets: {[key: string]: ecs.Secret} = {
@@ -112,8 +125,8 @@ export class SecBokAppStack extends cdk.Stack {
     // } 
 
     // RAILS_MASTER_KEY Secrets Manager
-    const railsSecret = new secretmanager.Secret(this, `RailsSecret-${props.targetEnv}`, {
-      secretName: `rails-master-key-${props.targetEnv}`,
+    const railsSecret = new secretmanager.Secret(this, `RailsSecret-${targetEnv}`, {
+      secretName: `rails-master-key-${targetEnv}`,
       secretObjectValue: {
         railsMasterKey: SecretValue.unsafePlainText('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
       }
@@ -124,19 +137,19 @@ export class SecBokAppStack extends cdk.Stack {
     )
     
     taskDefinition.addContainer('Container', {
-      containerName: `Container-${props.targetEnv}`,
+      containerName: `Container-${targetEnv}`,
       image: ecs.ContainerImage.fromEcrRepository(props.repository, 'latest'),
       memoryLimitMiB: 256,
       logging: ecs.LogDriver.awsLogs({
         streamPrefix: props.repository.repositoryName,
       }),
       environment: {
-        RAILS_ENV: props.railsEnv,
+        RAILS_ENV: railsEnv,
         RAILS_LOG_TO_STDOUT: 'true',
         DATABASE_HOST: postgresql.instanceEndpoint.hostname,
-        DATABASE_NAME: props.dbName,
-        DATABASE_NAME_PRODUCTION: props.dbName,
-        DATABASE_USER: props.dbUser
+        DATABASE_NAME: dbName,
+        DATABASE_NAME_PRODUCTION: dbName,
+        DATABASE_USER: dbUser
         /*
          * SMTP_ADDRESS #send gridから取得
          * SMTP_PORT #send gridから取得
@@ -152,10 +165,9 @@ export class SecBokAppStack extends cdk.Stack {
     // ALB
     const alb = new elbv2.ApplicationLoadBalancer(this, 'Alb', {
       vpc: this.vpc,
-      loadBalancerName: `Alb-${props.targetEnv}`,
+      loadBalancerName: `Alb-${targetEnv}`,
       internetFacing: true
     });
-    
     
     // TODO: セキュリテグルーを作成して追加。port 3000
     const lbFargateService = 
@@ -163,7 +175,7 @@ export class SecBokAppStack extends cdk.Stack {
         this, 
         'LoadBalancedFargateService', 
         {
-          serviceName: `Service-${props.targetEnv}`,
+          serviceName: `Service-${targetEnv}`,
           assignPublicIp: false,
           cluster: ecsCluster,
           taskSubnets: this.vpc.selectSubnets({
@@ -174,19 +186,23 @@ export class SecBokAppStack extends cdk.Stack {
           desiredCount: 2,
           taskDefinition: taskDefinition,
           publicLoadBalancer: true,
-          loadBalancer: alb
+          loadBalancer: alb,
+          protocol: ApplicationProtocol.HTTPS,
+          certificate: props.albCertificate,
+          domainName: props.albDomainName,
+          domainZone: props.albHostedZone
         }
       )
-      lbFargateService.service.connections.allowFrom(
-        ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
-        ec2.Port.tcp(3000)
-      )
-      lbFargateService.targetGroup.configureHealthCheck({
-        path: '/health_check'
-      })
+    lbFargateService.service.connections.allowFrom(
+      ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
+      ec2.Port.tcp(3000)
+    )
+    lbFargateService.targetGroup.configureHealthCheck({
+      path: '/health_check'
+    })
     
     // Rilas側でDNSリバインディング対策を行う場合は、コンテナに環境変数としてNLBのホスト名を渡す。
-    //const container = taskDefinition.findContainer(`Container-${props.targetEnv}`)
+    //const container = taskDefinition.findContainer(`Container-${targetEnv}`)
     //container?.addEnvironment('VALID_HOST', loadBalancedFargateService.loadBalancer.loadBalancerDnsName)
 
     // Auto Scaling Settings

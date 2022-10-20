@@ -1,5 +1,14 @@
 {
   "acknowledged-issue-numbers": [
     21902
+  ],
+  "hosted-zone:account=465254350166:domainName=yuhei.yokohama:region=ap-northeast-1": {
+    "Id": "/hostedzone/Z10025862ZNOECJ3MV4U",
+    "Name": "yuhei.yokohama."
+  },
+  "availability-zones:account=465254350166:region=ap-northeast-1": [
+    "ap-northeast-1a",
+    "ap-northeast-1c",
+    "ap-northeast-1d"
   ]
 }
